@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>atm_sell_pressure — Cumulative P&amp;L</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly.min.js"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --panel: #ffffff;
+    --text: #1a1a1a;
+    --muted: #6b6b6b;
+    --border: #e6e6e6;
+    --train: #2563eb;
+    --test: #e8720c;
+    --forward: #0f7a4d;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15171a;
+      --panel: #1c1f23;
+      --text: #eaeaea;
+      --muted: #9a9a9a;
+      --border: #2b2f34;
+      --train: #5b9bff;
+      --test: #ff9c4a;
+      --forward: #35c98a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15171a;
+    --panel: #1c1f23;
+    --text: #eaeaea;
+    --muted: #9a9a9a;
+    --border: #2b2f34;
+    --train: #5b9bff;
+    --test: #ff9c4a;
+    --forward: #35c98a;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); height: 100%; }
+  body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 18px;
+    font-weight: 650;
+    margin: 0 0 4px;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0 0 18px;
+  }
+  .legend-row {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .chart-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 8px 4px 4px;
+    overflow-x: auto;
+  }
+  #chart {
+    width: 100%;
+    min-width: 320px;
+    height: 460px;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .stat .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+  .stat .value { font-size: 16px; font-weight: 650; margin-top: 2px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>atm_sell_pressure — Cumulative P&amp;L</h1>
+    <p class="subtitle">NIFTY 0DTE, weekly resolution, 2024-02-08 → 2026-07-21</p>
+
+    <div class="legend-row">
+      <span class="legend-item"><span class="dot" style="background:var(--train)"></span>Train</span>
+      <span class="legend-item"><span class="dot" style="background:var(--test)"></span>Test</span>
+      <span class="legend-item"><span class="dot" style="background:var(--forward)"></span>Forward (2026)</span>
+    </div>
+
+    <div class="chart-card">
+      <div id="chart"></div>
+    </div>
+
+    <div class="stats" id="stats"></div>
+  </div>
+
+<script>
+// ---- data ----
+const rows = [
+["2024-02-08","train",29671.85],["2024-02-15","train",51706.3],["2024-02-22","train",58886.83],
+["2024-02-29","train",399110.55],["2024-03-07","train",637199.88],["2024-03-14","train",392941.7],
+["2024-03-21","train",430297.51],["2024-04-18","train",571551.87],["2024-05-02","test",824999.68],
+["2024-05-09","train",898307.82],["2024-05-16","test",636581.72],["2024-05-23","train",699865.76],
+["2024-05-30","train",1054544.55],["2024-06-06","train",1405187.86],["2024-06-13","test",1715199.04],
+["2024-06-27","test",1739947.23],["2024-07-04","train",1812103.26],["2024-07-11","train",1530784.48],
+["2024-07-18","train",1341218.14],["2024-07-25","test",1565347.52],["2024-08-01","train",1879657.63],
+["2024-08-08","train",1952180.62],["2024-08-14","train",2283203.24],["2024-08-22","test",2440711.89],
+["2024-08-29","test",2509312.11],["2024-09-05","train",2952854.29],["2024-09-19","train",2708248.85],
+["2024-09-26","train",2392632.81],["2024-10-10","train",2816318.47],["2024-10-17","train",3239855.5],
+["2024-10-24","train",3648054.0],["2024-10-31","train",3957318.35],["2024-11-07","test",4272268.99],
+["2024-11-14","train",4375574.17],["2024-11-21","test",4672505.73],["2024-11-28","test",4669751.32],
+["2024-12-05","train",4539501.53],["2024-12-12","train",4810593.04],["2024-12-19","train",5383680.17],
+["2024-12-26","train",5479834.91],["2025-01-02","train",5600668.42],["2025-01-09","train",5783398.38],
+["2025-01-16","test",5876460.28],["2025-01-23","train",6219397.66],["2025-02-06","train",6534559.56],
+["2025-02-13","train",6459431.91],["2025-02-20","train",6677240.02],["2025-02-27","test",6788265.04],
+["2025-03-06","train",6870938.7],["2025-03-20","train",6908157.56],["2025-03-27","test",7224683.29],
+["2025-04-03","train",7463881.23],["2025-04-09","train",8114580.87],["2025-04-17","train",8179263.75],
+["2025-04-24","test",8329061.45],["2025-04-30","test",8490380.01],["2025-05-08","train",8376258.07],
+["2025-05-15","train",8099022.26],["2025-05-22","train",8110128.23],["2025-05-29","test",8256628.48],
+["2025-06-05","test",8453919.76],["2025-06-12","test",8435056.03],["2025-06-19","test",8645344.39],
+["2025-06-26","train",8624639.72],["2025-07-03","train",8381990.14],["2025-07-10","test",8466838.23],
+["2025-07-17","train",8481061.47],["2025-07-24","test",8189654.51],["2025-07-31","train",8025138.6],
+["2025-08-07","train",7892946.88],["2025-08-14","train",8041222.41],["2025-08-21","train",7975615.98],
+["2025-08-28","train",7955422.12],["2025-09-02","test",7868970.9],["2025-09-09","train",8029024.54],
+["2025-09-16","test",8122862.23],["2025-09-23","train",8122270.28],["2025-09-30","test",8250191.06],
+["2025-10-07","test",8183020.51],["2025-10-14","test",8074501.99],["2025-10-20","train",8187713.98],
+["2025-10-28","train",8311376.34],["2025-11-04","train",8419049.1],["2025-11-11","test",8428627.35],
+["2025-11-18","train",8554245.46],["2025-11-25","test",8634182.83],["2025-12-02","train",8828857.34],
+["2025-12-09","train",8792870.69],["2025-12-16","train",8850284.85],["2025-12-23","test",8957577.62],
+["2025-12-30","test",8993886.05],["2026-01-06","forward",9049951.71],["2026-01-13","forward",9134967.38],
+["2026-01-20","forward",9137649.69],["2026-01-27","forward",9116105.62],["2026-02-03","forward",9338204.39],
+["2026-02-17","forward",9394174.64],["2026-02-24","forward",9603431.89],["2026-03-02","forward",9608398.31],
+["2026-03-10","forward",9748524.55],["2026-03-17","forward",9705425.03],["2026-03-24","forward",10019454.98],
+["2026-03-30","forward",9945068.93],["2026-04-07","forward",10134848.34],["2026-04-13","forward",10353409.35],
+["2026-04-21","forward",10613300.2],["2026-04-28","forward",10672231.24],["2026-05-05","forward",10418812.45],
+["2026-05-12","forward",10597406.23],["2026-05-19","forward",10676363.46],["2026-05-26","forward",10694765.3],
+["2026-06-02","forward",10723490.18],["2026-06-09","forward",10936459.75],["2026-06-30","forward",11074851.81],
+["2026-07-07","forward",11094576.82],["2026-07-14","forward",11260795.86],["2026-07-21","forward",11341020.71]
+];
+
+const series = { train: {x:[],y:[]}, test: {x:[],y:[]}, forward: {x:[],y:[]} };
+rows.forEach(([d, p, v]) => { series[p].x.push(d); series[p].y.push(v); });
+
+const rootStyles = getComputedStyle(document.documentElement);
+const colorTrain = rootStyles.getPropertyValue('--train').trim();
+const colorTest = rootStyles.getPropertyValue('--test').trim();
+const colorForward = rootStyles.getPropertyValue('--forward').trim();
+const textColor = rootStyles.getPropertyValue('--text').trim();
+const mutedColor = rootStyles.getPropertyValue('--muted').trim();
+const borderColor = rootStyles.getPropertyValue('--border').trim();
+
+function fmtINR(v) {
+  const sign = v < 0 ? "-" : "+";
+  const abs = Math.abs(v);
+  return sign + "₹" + abs.toLocaleString("en-IN", {maximumFractionDigits: 0});
+}
+
+function makeTrace(name, color, data) {
+  const lastX = data.x[data.x.length - 1];
+  const lastY = data.y[data.y.length - 1];
+  return {
+    x: data.x,
+    y: data.y,
+    name: name,
+    mode: "lines",
+    line: { shape: "hv", width: 2, color: color },
+    hovertemplate: "%{x}<br>" + name + ": %{y:,.0f}<extra></extra>",
+    showlegend: false,
+    _lastX: lastX,
+    _lastY: lastY
+  };
+}
+
+const tTrain = makeTrace("Train", colorTrain, series.train);
+const tTest = makeTrace("Test", colorTest, series.test);
+const tForward = makeTrace("Forward", colorForward, series.forward);
+
+const annotations = [tTrain, tTest, tForward].map(t => ({
+  x: t._lastX,
+  y: t._lastY,
+  xref: "x",
+  yref: "y",
+  text: fmtINR(t._lastY),
+  showarrow: false,
+  xanchor: "left",
+  font: { size: 12, color: t.line.color },
+  xshift: 6
+}));
+
+const layout = {
+  paper_bgcolor: "rgba(0,0,0,0)",
+  plot_bgcolor: "rgba(0,0,0,0)",
+  margin: { l: 60, r: 90, t: 10, b: 40 },
+  font: { color: textColor, size: 12 },
+  xaxis: {
+    type: "date",
+    gridcolor: borderColor,
+    showline: false,
+    tickfont: { color: mutedColor }
+  },
+  yaxis: {
+    title: { text: "Cumulative P&L (₹)" },
+    gridcolor: borderColor,
+    zeroline: false,
+    tickfont: { color: mutedColor },
+    tickformat: ",.0f"
+  },
+  hovermode: "x unified",
+  annotations: annotations
+};
+
+Plotly.newPlot("chart", [tTrain, tTest, tForward], layout, {
+  responsive: true,
+  displaylogo: false,
+  modeBarButtonsToRemove: ["lasso2d", "select2d"]
+});
+
+// ---- summary stats ----
+function last(arr) { return arr[arr.length - 1]; }
+const statsEl = document.getElementById("stats");
+const statDefs = [
+  { label: "Train final", value: fmtINR(last(series.train.y)) },
+  { label: "Test final", value: fmtINR(last(series.test.y)) },
+  { label: "Forward final (2026)", value: fmtINR(last(series.forward.y)) },
+  { label: "Total sessions", value: rows.length }
+];
+statsEl.innerHTML = statDefs.map(s =>
+  `<div class="stat"><div class="label">${s.label}</div><div class="value">${s.value}</div></div>`
+).join("");
+</script>
+</body>
+</html>
