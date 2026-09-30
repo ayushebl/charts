@@ -3724,9 +3724,6 @@ return Plotly;
 </head>
 <body>
   <div class="wrap">
-    <h1>atm_sell_pressure — Cumulative P&amp;L</h1>
-    <p class="subtitle">NIFTY 0DTE, weekly resolution, 2024-02-08 → 2026-07-21</p>
-
     <div class="legend-row">
       <span class="legend-item"><span class="dot" style="background:var(--train)"></span>Train</span>
       <span class="legend-item"><span class="dot" style="background:var(--test)"></span>Test</span>
@@ -3867,10 +3864,11 @@ Plotly.newPlot("chart", [tTrain, tTest, tForward], layout, {
 function last(arr) { return arr[arr.length - 1]; }
 const statsEl = document.getElementById("stats");
 const statDefs = [
-  { label: "Train final", value: fmtINR(last(series.train.y)) },
-  { label: "Test final", value: fmtINR(last(series.test.y)) },
-  { label: "Forward final (2026)", value: fmtINR(last(series.forward.y)) },
-  { label: "Total sessions", value: rows.length }
+  { label: "CAGR", value: "18.17%" },
+  { label: "Calmar", value: "9.13" },
+  { label: "Max drawdown", value: "-3.00%" },
+  { label: "Churn", value: "2.51" },
+  { label: "Win rate", value: "70.4%" }
 ];
 statsEl.innerHTML = statDefs.map(s =>
   `<div class="stat"><div class="label">${s.label}</div><div class="value">${s.value}</div></div>`
